@@ -27,7 +27,8 @@ function Finder:lsp_finder()
     return
   end
 
-  self.client = libs.get_client_by_cap('implementationProvider')
+  self.implementation_client = libs.get_client_by_cap('implementationProvider')
+  self.references_client = libs.get_client_by_cap('referencesProvider')
 
   -- push a tag stack
   local pos = api.nvim_win_get_cursor(0)
@@ -41,11 +42,13 @@ function Finder:lsp_finder()
   self.request_result = {}
   local params = lsp.util.make_position_params()
   for i, method in pairs(methods) do
-    if i == 2 and self.client then
+    if i == 1 then
       self:do_request(params, method)
     end
-
-    if i ~= 2 then
+    if i == 2 and self.implementation_client then
+      self:do_request(params, method)
+    end
+    if i == 3 and self.references_client then
       self:do_request(params, method)
     end
   end
@@ -103,9 +106,14 @@ function Finder:loading_bar()
   self.request_status = {}
 
   -- if server not support textDocument/implementation
-  if not self.client then
+  if not self.implementation_client then
     self.request_status[methods[2]] = true
     self.request_result[methods[2]] = {}
+  end
+  -- if server not support textDocument/references
+  if not self.references_client then
+    self.request_status[methods[3]] = true
+    self.request_result[methods[3]] = {}
   end
 
   local spin_frame = 1
